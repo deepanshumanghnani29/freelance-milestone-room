@@ -1,47 +1,64 @@
 // client/src/App.jsx
-// Root component. Sets up React Router so each URL maps to a page component.
-// Also provides the AuthContext (added in Phase 2) — for now it's a stub.
+// Root component. Wraps everything in AuthProvider so every page has
+// access to the session state, then sets up React Router.
 
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-import LoginPage        from "./pages/LoginPage";
-import OnboardingPage   from "./pages/OnboardingPage";
-import DashboardPage    from "./pages/DashboardPage";
+import LoginPage         from "./pages/LoginPage";
+import OnboardingPage    from "./pages/OnboardingPage";
+import DashboardPage     from "./pages/DashboardPage";
 import CreateProjectPage from "./pages/CreateProjectPage";
-import ProjectRoomPage  from "./pages/ProjectRoomPage";
+import ProjectRoomPage   from "./pages/ProjectRoomPage";
 
 /*
  * Route map:
- *   /login           → LoginPage      (public)
- *   /onboarding      → OnboardingPage (after first sign-in, before role is set)
- *   /dashboard       → DashboardPage  (authenticated)
+ *   /login           → LoginPage         (public)
+ *   /onboarding      → OnboardingPage    (authenticated, role not set yet)
+ *   /dashboard       → DashboardPage     (authenticated)
  *   /projects/new    → CreateProjectPage (authenticated, clients only)
- *   /projects/:id    → ProjectRoomPage   (authenticated, project members only)
+ *   /projects/:id    → ProjectRoomPage   (authenticated, project members)
  *
- * In Phase 2, these routes will be wrapped in a <ProtectedRoute> component
- * that reads the auth session and redirects to /login if the user isn't signed in.
+ * ProtectedRoute reads the AuthContext and shows a spinner while the session
+ * is loading, then redirects to /login if the user is not signed in.
+ *
+ * /onboarding is intentionally protected — an unauthenticated user who lands
+ * there is redirected to /login. A user who is authenticated but has no role
+ * yet will be redirected here from the dashboard (Phase 3 adds role persistence).
  */
-
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public */}
-        <Route path="/login"      element={<LoginPage />} />
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <AuthProvider>
+        <Routes>
+          {/* Public */}
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* Authenticated — Phase 2 will add protection */}
-        <Route path="/onboarding"   element={<OnboardingPage />} />
-        <Route path="/dashboard"    element={<DashboardPage />} />
-        <Route path="/projects/new" element={<CreateProjectPage />} />
-        <Route path="/projects/:id" element={<ProjectRoomPage />} />
+          {/* Protected */}
+          <Route
+            path="/onboarding"
+            element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/dashboard"
+            element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/projects/new"
+            element={<ProtectedRoute><CreateProjectPage /></ProtectedRoute>}
+          />
+          <Route
+            path="/projects/:id"
+            element={<ProtectedRoute><ProjectRoomPage /></ProtectedRoute>}
+          />
 
-        {/* Default: redirect root to dashboard (Phase 2 will redirect to /login if unauthenticated) */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+          {/* Default */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

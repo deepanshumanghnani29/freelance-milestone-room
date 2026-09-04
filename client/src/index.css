@@ -702,3 +702,68 @@ label {
     padding: 0 var(--space-4);
   }
 }
+
+/* ── Alert variants ───────────────────────────────────────────────────────── */
+/* (error and success defined earlier; info and warning added here)           */
+.alert--info {
+  background: rgba(108, 99, 255, 0.1);
+  border: 1px solid rgba(108, 99, 255, 0.3);
+  color: var(--color-primary-hover);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.alert--warning {
+  background: var(--color-warning-dim);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: var(--color-warning);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+/* ── Button variants ──────────────────────────────────────────────────────── */
+.btn--success {
+  background: var(--color-success);
+  color: #0a2218;
+  border: none;
+}
+.btn--success:hover:not(:disabled) {
+  background: #5de8b0;
+}
+
+.btn--danger {
+  background: var(--color-danger);
+  color: #2a0808;
+  border: none;
+}
+.btn--danger:hover:not(:disabled) {
+  background: #fc9090;
+}
+
+/* ── Typography utilities ─────────────────────────────────────────────────── */
+.font-semibold  { font-weight: 600; }
+.text-danger    { color: var(--color-danger); font-size: var(--text-xs); margin-top: 4px; display: block; }
+.text-xs        { font-size: var(--text-xs); }
+.text-sm        { font-size: var(--text-sm); }
+.text-muted     { color: var(--color-text-muted); }
+
+/* ── Spacing utilities ────────────────────────────────────────────────────── */
+.mt-2  { margin-top: var(--space-2); }
+.mt-4  { margin-top: var(--space-4); }
+.mt-6  { margin-top: var(--space-6); }
+.mb-4  { margin-bottom: var(--space-4); }
+.gap-4 { gap: var(--space-4); }
+
+/* ── Flex utilities ───────────────────────────────────────────────────────── */
+.flex            { display: flex; }
+.items-start     { align-items: flex-start; }
+.items-center    { align-items: center; }
+.justify-between { justify-content: space-between; }
+.flex-wrap       { flex-wrap: wrap; }
+
+/* -- Utilities -------------------------------------------------------------- */
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.break-words { overflow-wrap: break-word; word-break: break-word; }
+

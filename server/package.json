@@ -2,16 +2,20 @@
   "name": "milestone-room-server",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "node --watch index.js",
-    "test": "vitest run --reporter=verbose"
+    "dev": "node --env-file=../.env --watch index.js",
+    "start": "node --env-file=../.env index.js",
+    "test": "node --env-file=../.env ./node_modules/vitest/vitest.mjs run --reporter=verbose"
   },
   "dependencies": {
+    "@namoidhq/js": "^3.2.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
     "express-session": "^1.18.0",
-    "mongoose": "^8.5.1",
-    "openid-client": "^5.6.5"
+    "helmet": "^8.0.0",
+    "mongoose": "^8.5.1"
   },
   "devDependencies": {
     "supertest": "^7.0.0",

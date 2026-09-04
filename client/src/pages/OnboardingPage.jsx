@@ -1,11 +1,12 @@
 // client/src/pages/OnboardingPage.jsx
 // Shown once, immediately after a user's very first sign-in.
 // The user picks a permanent role: Client or Freelancer.
-// After choosing, we POST to /api/users/me/role (added in Phase 3)
-// and then redirect to the dashboard. The role cannot be changed later.
+// POSTs to /api/users/me/role (Phase 3) then redirects to dashboard.
+// Uses AuthContext for session state — no duplicate /me fetch.
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const ROLES = [
   {
@@ -24,9 +25,11 @@ const ROLES = [
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
+  const { refreshSession } = useAuth();
+
   const [selected, setSelected] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState(null);
 
   async function handleSubmit() {
     if (!selected) return;
@@ -34,12 +37,11 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
-      // Phase 3 will implement this endpoint
       const res = await fetch("/api/users/me/role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ role: selected }),
-        credentials: "include", // send session cookie
       });
 
       if (!res.ok) {
@@ -47,6 +49,8 @@ export default function OnboardingPage() {
         throw new Error(data.error || "Failed to save role.");
       }
 
+      // Refresh the AuthContext so the new role is reflected immediately.
+      await refreshSession();
       navigate("/dashboard");
     } catch (err) {
       setError(err.message);
@@ -64,7 +68,6 @@ export default function OnboardingPage() {
           do inside Milestone Room.
         </p>
 
-        {/* Role selector cards */}
         <div className="role-grid">
           {ROLES.map((role) => (
             <button
@@ -81,10 +84,8 @@ export default function OnboardingPage() {
           ))}
         </div>
 
-        {/* Error message */}
         {error && <div className="alert alert--error mb-4">{error}</div>}
 
-        {/* Confirm button */}
         <button
           id="btn-confirm-role"
           className="btn btn--primary btn--lg"

@@ -1,13 +1,16 @@
 // client/src/pages/DashboardPage.jsx
-// Shows the signed-in user's projects.
-// Clients see projects they created; freelancers see projects assigned to them.
-// Data is fetched from GET /api/projects (Phase 3).
+// Shows the signed-in user's projects fetched from GET /api/projects.
+// Clients see projects they created.
+// Freelancers see projects where they are the assigned freelancer.
+//
+// Auth state comes from AuthContext — no duplicate /api/auth/me call.
 
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import StatusBadge from "../components/StatusBadge";
 
 // ── Navbar ────────────────────────────────────────────────────────────────────
-// A small shared header. In Phase 4 this will move to a shared Layout component.
 function Navbar({ user, onLogout }) {
   return (
     <nav className="navbar">
@@ -17,16 +20,22 @@ function Navbar({ user, onLogout }) {
       </div>
       <div className="navbar__right">
         {user && (
-          <span className="navbar__user">
-            {user.name || user.email}
+          <span className="navbar__user" style={{ display: "flex", alignItems: "center", maxWidth: "200px" }}>
+            <span className="truncate" title={user.name || user.email}>
+              {user.name || user.email}
+            </span>
             {user.role && (
-              <span className="badge badge--primary" style={{ marginLeft: 8 }}>
+              <span className="badge badge--primary" style={{ marginLeft: 8, textTransform: "capitalize", whiteSpace: "nowrap" }}>
                 {user.role}
               </span>
             )}
           </span>
         )}
-        <button className="btn btn--ghost btn--sm" onClick={onLogout} id="btn-logout">
+        <button
+          className="btn btn--ghost btn--sm"
+          onClick={onLogout}
+          id="btn-logout"
+        >
           Sign out
         </button>
       </div>
@@ -34,72 +43,71 @@ function Navbar({ user, onLogout }) {
   );
 }
 
-// ── Status badge helper ───────────────────────────────────────────────────────
-function statusBadge(status) {
-  const map = {
-    pending_ack:     { label: "Awaiting Acknowledgement", cls: "badge--warning" },
-    scope_locked:    { label: "Scope Locked",             cls: "badge--primary" },
-    in_progress:     { label: "In Progress",              cls: "badge--primary" },
-    review:          { label: "In Review",                cls: "badge--warning" },
-    changes_requested:{ label: "Changes Requested",       cls: "badge--danger"  },
-    accepted:        { label: "Accepted",                 cls: "badge--success" },
-  };
-  const entry = map[status] || { label: status, cls: "badge--muted" };
-  return <span className={`badge ${entry.cls}`}>{entry.label}</span>;
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { auth, signOut } = useAuth();
+  // auth.status is always "authenticated" here because ProtectedRoute checked.
+  const user = auth.user;
 
-  const [user, setUser]       = useState(null);
   const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
 
-  // Load current user from session
+  // If the user hasn't picked a role yet, send them to onboarding.
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
+    if (user && !user.role) {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [user, navigate]);
+
+  // Fetch real projects from the backend. No mock data.
+  useEffect(() => {
+    if (!user?.role) return; // wait until role is confirmed
+    fetch("/api/projects", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
       .then((r) => {
-        if (r.status === 401) { navigate("/login"); return null; }
+        if (r.status === 401) { navigate("/login", { replace: true }); return null; }
+        if (!r.ok) throw new Error(`Status ${r.status}`);
         return r.json();
       })
       .then((data) => {
-        if (!data) return;
-        // If the user has no role yet, redirect to onboarding
-        if (!data.user?.role) { navigate("/onboarding"); return; }
-        setUser(data.user);
-      })
-      .catch(() => navigate("/login"));
-  }, [navigate]);
-
-  // Load projects after user is known
-  useEffect(() => {
-    if (!user) return;
-    fetch("/api/projects", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data) => {
-        setProjects(data.projects || []);
+        if (data) setProjects(data.projects || []);
         setLoading(false);
       })
       .catch(() => {
-        setError("Could not load projects.");
+        setError("Could not load projects. Please try refreshing.");
         setLoading(false);
       });
-  }, [user]);
+  }, [user, navigate]);
 
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    navigate("/login");
+  function relativeTime(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1)   return "just now";
+    if (mins < 60)  return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)   return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="page-wrapper">
-      <Navbar user={user} onLogout={handleLogout} />
+      <Navbar user={user} onLogout={signOut} />
 
       <main className="container dashboard">
-        <div className="page-header flex justify-between items-center">
+        <div
+          className="page-header"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            gap: "var(--space-4)",
+          }}
+        >
           <div>
             <h1>Your Projects</h1>
             <p>
@@ -108,14 +116,20 @@ export default function DashboardPage() {
                 : "Projects where you are the assigned freelancer."}
             </p>
           </div>
+
+          {/* Only clients can create projects */}
           {user?.role === "client" && (
-            <Link to="/projects/new" className="btn btn--primary" id="btn-new-project">
+            <Link
+              to="/projects/new"
+              className="btn btn--primary"
+              id="btn-new-project"
+            >
               + New Project
             </Link>
           )}
         </div>
 
-        {/* Loading state */}
+        {/* ── Loading ── */}
         {loading && (
           <div className="loading-center">
             <div className="spinner" />
@@ -123,10 +137,10 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Error state */}
+        {/* ── Error ── */}
         {error && <div className="alert alert--error">{error}</div>}
 
-        {/* Empty state */}
+        {/* ── Empty state ── */}
         {!loading && !error && projects.length === 0 && (
           <div className="empty-state">
             <div className="empty-state__icon">📂</div>
@@ -134,7 +148,7 @@ export default function DashboardPage() {
             <p>
               {user?.role === "client"
                 ? "Create your first project to get started."
-                : "You haven't been assigned to any projects yet."}
+                : "You haven't been assigned to any projects yet. Ask your client to invite you by email."}
             </p>
             {user?.role === "client" && (
               <Link
@@ -148,7 +162,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Project grid */}
+        {/* ── Project grid ── */}
         {!loading && !error && projects.length > 0 && (
           <div className="project-grid">
             {projects.map((project) => (
@@ -158,14 +172,35 @@ export default function DashboardPage() {
                 style={{ textDecoration: "none" }}
               >
                 <div className="card card--hover">
-                  <div className="project-card__title">{project.title}</div>
+                  <div
+                    className="flex justify-between items-start"
+                    style={{ gap: "var(--space-2)", marginBottom: "var(--space-3)" }}
+                  >
+                    <div
+                      className="project-card__title"
+                      style={{ marginBottom: 0 }}
+                    >
+                      {project.title}
+                    </div>
+                    <StatusBadge status={project.status} />
+                  </div>
+
                   <div className="project-card__meta">
                     Scope: {project.scope?.title || "—"}
                   </div>
-                  <div className="project-card__footer">
-                    {statusBadge(project.status)}
+
+                  <div className="project-card__meta" style={{ marginTop: 4 }}>
+                    {user?.role === "client"
+                      ? `Freelancer: ${project.freelancerEmail}`
+                      : `Client: ${project.clientName || project.clientId}`}
+                  </div>
+
+                  <div
+                    className="project-card__footer"
+                    style={{ marginTop: "var(--space-4)" }}
+                  >
                     <span className="text-xs text-muted">
-                      {new Date(project.createdAt).toLocaleDateString()}
+                      Updated {relativeTime(project.updatedAt || project.createdAt)}
                     </span>
                   </div>
                 </div>

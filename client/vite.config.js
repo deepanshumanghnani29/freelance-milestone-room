@@ -12,12 +12,15 @@ export default defineConfig({
   plugins: [react()],
 
   server: {
-    port: 5174, // React dev server port
+    port: 5174,       // React dev server port — must match APP_BASE_URL and NamoID redirect URI
+    strictPort: true, // Fail instead of silently switching to 5175 (which breaks NamoID callbacks)
     proxy: {
       // Any request that starts with /api is forwarded to Express
       "/api": {
         target: "http://localhost:4000",
         changeOrigin: true, // fixes the Host header so Express accepts it
+        // Forward cookies so session cookies survive the proxy hop
+        cookieDomainRewrite: "",
       },
     },
   },

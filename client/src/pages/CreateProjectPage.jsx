@@ -1,19 +1,15 @@
 // client/src/pages/CreateProjectPage.jsx
 // Only clients can reach this page (enforced on the backend in Phase 3).
 // Submits a new project to POST /api/projects.
-//
-// The form collects:
-//   - Project title
-//   - Freelancer email
-//   - Scope title
-//   - Scope description
-//   - Expected deliverable
+// Uses AuthContext for sign-out — no duplicate /me fetch.
 
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function CreateProjectPage() {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const [form, setForm] = useState({
     title: "",
@@ -24,9 +20,8 @@ export default function CreateProjectPage() {
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError]     = useState(null);
 
-  // Generic handler: updates whichever field changed
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
@@ -40,15 +35,15 @@ export default function CreateProjectPage() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        credentials: "same-origin",
         body: JSON.stringify({
           title: form.title,
           freelancerEmail: form.freelancerEmail,
           scope: {
-            title: form.scopeTitle,
-            description: form.scopeDescription,
+            title:               form.scopeTitle,
+            description:         form.scopeDescription,
             expectedDeliverable: form.expectedDeliverable,
-            // `version` is set to 1 by the server (Phase 3)
+            // version is set to 1 by the server (Phase 3)
           },
         }),
       });
@@ -59,7 +54,6 @@ export default function CreateProjectPage() {
       }
 
       const { project } = await res.json();
-      // Go straight to the new project room
       navigate(`/projects/${project._id}`);
     } catch (err) {
       setError(err.message);
@@ -70,15 +64,19 @@ export default function CreateProjectPage() {
 
   return (
     <div className="page-wrapper">
-      {/* Simple top bar */}
       <nav className="navbar">
         <div className="navbar__brand">
           <span className="navbar__brand-dot" />
           Milestone Room
         </div>
-        <Link to="/dashboard" className="btn btn--ghost btn--sm">
-          ← Back to dashboard
-        </Link>
+        <div className="navbar__right">
+          <Link to="/dashboard" className="btn btn--ghost btn--sm">
+            ← Dashboard
+          </Link>
+          <button className="btn btn--ghost btn--sm" onClick={signOut} id="btn-logout">
+            Sign out
+          </button>
+        </div>
       </nav>
 
       <main className="container create-project-page">
@@ -90,13 +88,10 @@ export default function CreateProjectPage() {
           </p>
         </div>
 
-        {/* Max width for readability */}
         <div style={{ maxWidth: 640 }}>
           <form className="form-stack" onSubmit={handleSubmit} noValidate>
-            {/* ── Project info ──────────────────────────────────────────────── */}
             <div className="card">
               <p className="section-title">Project details</p>
-
               <div className="form-stack">
                 <div className="form-group">
                   <label htmlFor="title">Project title *</label>
@@ -110,7 +105,6 @@ export default function CreateProjectPage() {
                     required
                   />
                 </div>
-
                 <div className="form-group">
                   <label htmlFor="freelancerEmail">Freelancer email *</label>
                   <input
@@ -130,10 +124,8 @@ export default function CreateProjectPage() {
               </div>
             </div>
 
-            {/* ── Scope ────────────────────────────────────────────────────── */}
             <div className="card">
               <p className="section-title">Initial scope (version 1)</p>
-
               <div className="form-stack">
                 <div className="form-group">
                   <label htmlFor="scopeTitle">Scope title *</label>
@@ -147,7 +139,6 @@ export default function CreateProjectPage() {
                     required
                   />
                 </div>
-
                 <div className="form-group">
                   <label htmlFor="scopeDescription">Scope description *</label>
                   <textarea
@@ -160,7 +151,6 @@ export default function CreateProjectPage() {
                     required
                   />
                 </div>
-
                 <div className="form-group">
                   <label htmlFor="expectedDeliverable">Expected deliverable *</label>
                   <input
@@ -176,13 +166,10 @@ export default function CreateProjectPage() {
               </div>
             </div>
 
-            {/* ── Error and actions ────────────────────────────────────────── */}
             {error && <div className="alert alert--error">{error}</div>}
 
             <div className="form-actions">
-              <Link to="/dashboard" className="btn btn--ghost">
-                Cancel
-              </Link>
+              <Link to="/dashboard" className="btn btn--ghost">Cancel</Link>
               <button
                 id="btn-create-project"
                 type="submit"
