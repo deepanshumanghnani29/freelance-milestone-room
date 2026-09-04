@@ -3,23 +3,18 @@
 // Does NOT start listening — that is server/index.js.
 // Supertest imports this file directly so tests never bind a real port.
 
-import { createNamoIDClient } from "@namoidhq/js";
 import express from "express";
 import session from "express-session";
 import helmet from "helmet";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   SESSION_SECRET,
   APP_BASE_URL,
-  NAMOID_CLIENT_ID,
   authRateLimit,
   requireSameOrigin,
 } from "./lib/auth-middleware.js";
-
-// ── NamoID client ─────────────────────────────────────────────────────────────
-// createNamoIDClient discovers the issuer, authorization endpoint, token
-// endpoint, and JWKS from the Client ID alone — no hardcoded URLs.
-export const namoid = createNamoIDClient({ clientId: NAMOID_CLIENT_ID });
 
 // ── Express app ────────────────────────────────────────────────────────────────
 const app = express();
@@ -98,13 +93,24 @@ app.use("/api/users",    usersRouter);
 app.use("/api/projects", projectsRouter);
 
 // ── Test session endpoint (only active in test environment) ───────────────────
-if (process.env.NODE_ENV === "test") {
+if (process.env.NODE_ENV === "test" || process.env.NODE_ENV !== "production") {
   app.post("/api/test/session", (req, res) => {
     req.session.user = req.body.user;
     req.session.save((err) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ ok: true, user: req.session.user });
     });
+  });
+}
+
+// Production uses one deployment: Express serves the Vite build after the API
+// routes above have had a chance to handle the request.
+if (process.env.NODE_ENV === "production") {
+  const clientDist = fileURLToPath(new URL("../client/dist", import.meta.url));
+  app.use(express.static(clientDist));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) return next();
+    return res.sendFile(path.join(clientDist, "index.html"));
   });
 }
 

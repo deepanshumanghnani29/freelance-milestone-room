@@ -56,9 +56,14 @@ export const authRateLimit = rateLimit({
 export function requireSameOrigin(req, res, next) {
   const origin  = req.headers["origin"]  || "";
   const referer = req.headers["referer"] || "";
-  const isSameOrigin =
-    origin.startsWith(APP_ORIGIN) ||
-    referer.startsWith(APP_ORIGIN);
+  let requestOrigin = "";
+  try {
+    requestOrigin = origin ? new URL(origin).origin : new URL(referer).origin;
+  } catch {
+    requestOrigin = "";
+  }
+
+  const isSameOrigin = requestOrigin === APP_ORIGIN;
   if (!isSameOrigin) {
     return res.status(403).json({ error: "Cross-origin request not allowed." });
   }

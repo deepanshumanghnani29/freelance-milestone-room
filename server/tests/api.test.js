@@ -14,8 +14,24 @@ vi.mock('@namoidhq/js', async (importOriginal) => {
   return {
     ...mod,
     createNamoIDClient: () => ({
-      hostedAuth: { exchange: vi.fn() },
-      userInfo: vi.fn(),
+      hostedAuth: {
+        start: vi.fn().mockResolvedValue({
+          authorizationUrl: 'https://example.test/authorize',
+          transaction: {
+            state: 'state_1',
+            nonce: 'nonce_1',
+            codeVerifier: 'verifier_1',
+            redirectUri: 'http://localhost:5174/api/auth/callback',
+            createdAt: Date.now(),
+          },
+        }),
+        exchangeCode: vi.fn(),
+        userInfo: vi.fn(),
+        refresh: vi.fn(),
+        revoke: vi.fn(),
+        getLogoutUrl: vi.fn(),
+      },
+      auth: { getDiscovery: vi.fn() },
     }),
   };
 });
@@ -33,6 +49,31 @@ async function createAuthAgent(user) {
 describe('API Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('0. Authentication request origin', () => {
+    it('allows the configured frontend origin', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .set('Origin', 'http://localhost:5174');
+
+      expect(res.status).toBe(200);
+      expect(res.body.authorizationUrl).toBe('https://example.test/authorize');
+    });
+
+    it('rejects missing, foreign, and prefix-confusion origins', async () => {
+      const missing = await request(app).post('/api/auth/login');
+      const foreign = await request(app)
+        .post('/api/auth/login')
+        .set('Origin', 'https://evil.example');
+      const prefixConfusion = await request(app)
+        .post('/api/auth/login')
+        .set('Origin', 'http://localhost:5174.evil.example');
+
+      expect(missing.status).toBe(403);
+      expect(foreign.status).toBe(403);
+      expect(prefixConfusion.status).toBe(403);
+    });
   });
 
   // 1. Unauthenticated request returns 401

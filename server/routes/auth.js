@@ -35,7 +35,7 @@
 
 import { Router } from "express";
 import { validateOIDCIdToken } from "@namoidhq/js/server";
-import { namoid } from "../app.js";
+import { namoid } from "../lib/namoid.js";
 import {
   NAMOID_CLIENT_ID,
   NAMOID_CLIENT_SECRET,

@@ -696,10 +696,29 @@ label {
 
   .navbar {
     padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .navbar__right {
+    gap: var(--space-2);
+    margin-left: auto;
+  }
+
+  .navbar__user {
+    display: none !important;
   }
 
   .container {
     padding: 0 var(--space-4);
+  }
+
+  .card {
+    padding: var(--space-4);
+  }
+
+  .form-actions {
+    flex-wrap: wrap;
   }
 }
 
@@ -766,4 +785,3 @@ label {
 /* -- Utilities -------------------------------------------------------------- */
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .break-words { overflow-wrap: break-word; word-break: break-word; }
-
