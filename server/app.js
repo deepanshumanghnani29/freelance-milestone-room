@@ -93,7 +93,7 @@ app.use("/api/users",    usersRouter);
 app.use("/api/projects", projectsRouter);
 
 // ── Test session endpoint (only active in test environment) ───────────────────
-if (process.env.NODE_ENV === "test" || process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV === "test") {
   app.post("/api/test/session", (req, res) => {
     req.session.user = req.body.user;
     req.session.save((err) => {
