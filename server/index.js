@@ -8,7 +8,10 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: new URL("../.env", import.meta.url) });
 
-const PORT = parseInt(process.env.SERVER_PORT ?? "4000", 10);
+const PORT = parseInt(
+  process.env.PORT ?? process.env.SERVER_PORT ?? "4000",
+  10
+);
 
 async function startServer() {
   try {
