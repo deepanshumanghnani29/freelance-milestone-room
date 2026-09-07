@@ -22,9 +22,10 @@ export function trimTrailingSlash(str) {
 }
 
 // ── Read env vars ─────────────────────────────────────────────────────────────
-// Computed once, exported for use in app.js and auth routes.
 export const APP_BASE_URL = trimTrailingSlash(
-  process.env.APP_BASE_URL ?? "http://localhost:5174"
+  (process.env.NODE_ENV === "production" && process.env.RENDER_EXTERNAL_URL && (!process.env.APP_BASE_URL || process.env.APP_BASE_URL.includes("localhost")))
+    ? process.env.RENDER_EXTERNAL_URL
+    : (process.env.APP_BASE_URL ?? "http://localhost:5174")
 );
 export const APP_ORIGIN = new URL(APP_BASE_URL).origin;
 export const NAMOID_CLIENT_ID     = required("NAMOID_CLIENT_ID");
